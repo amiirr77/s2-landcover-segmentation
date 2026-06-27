@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinel-2 Land Cover</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    :root { --panel: #11161d; --ink: #e7edf3; --muted: #8b97a5; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
+    #map { position: absolute; inset: 0; }
+    .panel {
+      position: absolute; top: 12px; left: 12px; z-index: 1000;
+      background: var(--panel); color: var(--ink); padding: 14px 16px;
+      border-radius: 10px; max-width: 280px; box-shadow: 0 6px 24px rgba(0,0,0,.35);
+    }
+    .panel h1 { font-size: 14px; margin: 0 0 4px; letter-spacing: .02em; }
+    .panel p { font-size: 12px; color: var(--muted); margin: 0 0 10px; }
+    .legend { display: grid; gap: 4px; max-height: 40vh; overflow: auto; }
+    .legend .row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+    .legend .sw { width: 14px; height: 14px; border-radius: 3px; flex: none; }
+    .empty { font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div class="panel">
+    <h1>Sentinel-2 Land Cover</h1>
+    <p>U-Net segmentation · ESA WorldCover labels</p>
+    <div id="legend" class="legend"><span class="empty">Loading…</span></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const map = L.map("map").setView([35.70, 51.38], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "&copy; OpenStreetMap contributors", maxZoom: 19
+    }).addTo(map);
+
+    async function load() {
+      const legendEl = document.getElementById("legend");
+      let data;
+      try {
+        const res = await fetch("/api/result");
+        if (!res.ok) throw new Error(await res.text());
+        data = await res.json();
+      } catch (e) {
+        legendEl.innerHTML =
+          '<span class="empty">No prediction yet — run training then predict.</span>';
+        return;
+      }
+
+      const bounds = data.bounds; // [[s,w],[n,e]]
+      const rgb = L.imageOverlay("/outputs/image.png", bounds, { opacity: 1 });
+      const mask = L.imageOverlay("/outputs/mask.png", bounds, { opacity: 0.7 });
+      rgb.addTo(map);
+      mask.addTo(map);
+      map.fitBounds(bounds);
+
+      const overlays = {
+        "Sentinel-2 RGB": rgb,
+        "Predicted land cover": mask
+      };
+      if (data.has_reference) {
+        const ref = L.imageOverlay("/outputs/label.png", bounds, { opacity: 0.7 });
+        overlays["Reference (WorldCover)"] = ref;
+      }
+      L.control.layers(null, overlays, { collapsed: false }).addTo(map);
+
+      legendEl.innerHTML = "";
+      for (const c of data.legend) {
+        const row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML =
+          `<span class="sw" style="background:${c.color}"></span><span>${c.name}</span>`;
+        legendEl.appendChild(row);
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

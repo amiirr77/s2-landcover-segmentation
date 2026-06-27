@@ -1,0 +1,33 @@
+# Area of interest and run configuration.
+aoi:
+  # bbox in lon/lat: [min_lon, min_lat, max_lon, max_lat]  (default: part of Tehran)
+  bbox: [51.30, 35.65, 51.45, 35.78]
+  time_range: "2023-06-01/2023-09-30"   # STAC datetime range
+  max_cloud: 10                          # max scene cloud cover (%)
+
+data:
+  bands: [B04, B03, B02, B08]            # R, G, B, NIR  (order matters for RGB preview)
+  num_scenes: 8                          # fetch the N least-cloudy scenes (bigger dataset)
+  tile_size: 256
+  stride: 256
+  out_dir: data
+
+train:
+  epochs: 20
+  batch_size: 8
+  lr: 0.0003
+  encoder: resnet34
+  loss: ce_dice                          # ce | dice | focal | ce_dice
+  augment: true                          # random flips + 90-degree rotations
+  device: auto                           # auto | cpu | cuda
+  ckpt: checkpoints/best.pt
+
+predict:
+  out_dir: outputs
+  # Predict on a DIFFERENT, unseen region for a true spatial-generalization test.
+  # The model trains on aoi.bbox (Tehran) and is evaluated here on Tabriz.
+  # Remove this `aoi:` block to instead predict on the first training scene.
+  aoi:
+    bbox: [46.22, 38.02, 46.38, 38.13]   # part of Tabriz (different UTM zone, unseen)
+    time_range: "2023-06-01/2023-09-30"
+    max_cloud: 10

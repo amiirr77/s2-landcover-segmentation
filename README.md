@@ -40,8 +40,20 @@ inference, and serving are separate, testable modules.
 - A small **FastAPI** service and a web map — i.e. turning an analysis into a
   *system*, not a notebook.
 
-## Quickstart
 
+## Results
+
+Trained on a Tehran scene (only 8 Tiles) and evaluated on a Tile. With a single training scene the IoU is modest — the point here is the *pipeline
+and generalization behaviour*, not a state-of-the-art score.
+
+| True-color input | Predicted land cover |
+|:---:|:---:|
+| ![Sentinel-2 RGB](docs/assets/image.png) | ![U-Net prediction](docs/assets/mask.png) |
+
+
+
+
+## Quickstart
 > Requires Python 3.10+. Training is fine on CPU for a small AOI; a GPU is faster.
 
 ```bash
